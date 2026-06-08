@@ -75,13 +75,25 @@ local cachedLink, cachedTime = "", 0
 local host = "https://api.platoboost.com"
 
 -- Check server connectivity
-local function checkConnectivity( )
-    local response = safeRequest({Url = host .. "/public/connectivity", Method = "GET"})
-    if not response or (response.StatusCode ~= 200 and response.StatusCode ~= 429) then
-        host = "https://api.platoboost.net"
+-- Check server connectivity (Исправленная версия)
+local function checkConnectivity()
+    local response, err = safeRequest({Url = host .. "/public/connectivity", Method = "GET"})
+    
+    -- Если сервер ответил и всё ок (200 или 429), оставляем .com
+    if response and (response.StatusCode == 200 or response.StatusCode == 429) then
+        return
+    end
+    
+    -- В любом другом случае (ошибка, таймаут, статус 5xx) переключаемся на резервный .net
+    host = "https://api.platoboost.net"
+    
+    -- Проверяем резервный хост на всякий случай
+    local fallbackResponse = safeRequest({Url = host .. "/public/connectivity", Method = "GET"})
+    if not fallbackResponse or (fallbackResponse.StatusCode ~= 200 and fallbackResponse.StatusCode ~= 429) then
+        warn("[Rowe Hub] Оба сервера PlatoBoost (.com и .net) недоступны или ваш исполнитель блокирует запросы!")
     end
 end
-checkConnectivity( )
+checkConnectivity()
 
 local function generateNonce()
     local str = ""
